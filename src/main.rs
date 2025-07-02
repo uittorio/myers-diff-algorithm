@@ -3,6 +3,12 @@ use std::fmt::Display;
 fn main() {
     let a = "A\nB\nC\nA\nB\nB\nA";
     let b = "C\nB\nA\nB\nA\nC";
+
+    // TODO: Why does it prioritise going left instead of up first?
+    //       How does that become "prioritising deletions"? (SEE: Path.png)
+    // TODO: this below doesn't print the first A? Where are you?
+    // let a = "A\nB\nA";
+    // let b = "A\nD\nC\nA";
     let res = Diff.diff(a.to_string(), b.to_string(), Myers);
     println!("{}", DiffResult(res));
 }
