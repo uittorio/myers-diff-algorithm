@@ -4,11 +4,6 @@ fn main() {
     let a = "A\nB\nC\nA\nB\nB\nA";
     let b = "C\nB\nA\nB\nA\nC";
 
-    // TODO: Why does it prioritise going left instead of up first?
-    //       How does that become "prioritising deletions"? (SEE: Path.png)
-    // TODO: this below doesn't print the first A? Where are you?
-    // let a = "A\nB\nA";
-    // let b = "A\nD\nC\nA";
     let res = Diff.diff(a.to_string(), b.to_string(), Myers);
     println!("{}", DiffResult(res));
 }
@@ -151,7 +146,11 @@ impl Myers {
             let previous_ki = (previous_k + max as i32) as usize;
 
             previous_x = v[previous_ki];
-            previous_y = (previous_x as i32 - previous_k) as usize;
+            previous_y = if (previous_x as i32) < previous_k {
+                0
+            } else {
+                (previous_x as i32 - previous_k) as usize
+            };
 
             while x > previous_x && y > previous_y {
                 result.push((x - 1, y - 1, x, y));
@@ -173,15 +172,77 @@ impl Myers {
 
 #[cfg(test)]
 mod tests {
-    // use crate::{Diff, Myers};
+    use super::*;
+    use crate::{Diff, Myers};
 
-    // #[test]
-    // fn example() {
-    //     let a = "A\nB\nC\nA\nB\nB\nA";
-    //     let b = "C\nB\nA\nB\nA\nC";
+    #[test]
+    fn example() {
+        let a = "A\nB\nC\nA\nB\nB\nA";
+        let b = "C\nB\nA\nB\nA\nC";
 
-    //     let result = Myers.shortest_edit(&Diff.lines(a.to_string()), &Diff.lines(b.to_string()));
+        let result = Diff.diff(a.to_string(), b.to_string(), Myers);
 
-    //     assert_eq!(result, 5)
-    // }
+        assert!(matches!(&result[0], Edit::Delete(e) if e.text == "A"));
+        assert!(matches!(&result[1], Edit::Delete(e) if e.text == "B"));
+        assert!(matches!(&result[2], Edit::Unchanged(a, _) if a.text == "C"));
+        assert!(matches!(&result[3], Edit::Insert(e) if e.text == "B"));
+        assert!(matches!(&result[4], Edit::Unchanged(a, _) if a.text == "A"));
+        assert!(matches!(&result[5], Edit::Unchanged(a, _) if a.text == "B"));
+        assert!(matches!(&result[6], Edit::Delete(e) if e.text == "B"));
+        assert!(matches!(&result[7], Edit::Unchanged(a, _) if a.text == "A"));
+        assert!(matches!(&result[8], Edit::Insert(e) if e.text == "C"));
+    }
+
+    #[test]
+    fn missing_first_a_maybe() {
+        let a = "A\nB\nA";
+        let b = "A\nD\nC\nA";
+
+        let result = Diff.diff(a.to_string(), b.to_string(), Myers);
+
+        assert!(matches!(&result[0], Edit::Unchanged(a, _) if a.text == "A"));
+        assert!(matches!(&result[1], Edit::Delete(e) if e.text == "B"));
+        assert!(matches!(&result[2], Edit::Insert(e) if e.text == "D"));
+        assert!(matches!(&result[3], Edit::Insert(e) if e.text == "C"));
+        assert!(matches!(&result[4], Edit::Unchanged(a, _) if a.text == "A"));
+    }
+
+    #[test]
+    fn missing_first_a_simpler_maybe() {
+        let a = "A\nB";
+        let b = "A\nD";
+
+        let result = Diff.diff(a.to_string(), b.to_string(), Myers);
+
+        assert!(matches!(&result[0], Edit::Unchanged(a, _) if a.text == "A"));
+        assert!(matches!(&result[1], Edit::Delete(e) if e.text == "B"));
+        assert!(matches!(&result[2], Edit::Insert(e) if e.text == "D"));
+    }
+
+    #[test]
+    fn missing_first_multiple_lines_maybe() {
+        let a = "B\nC\nA\nB\nA";
+        let b = "B\nC\nA\nD\nC\nA";
+
+        let result = Diff.diff(a.to_string(), b.to_string(), Myers);
+
+        assert!(matches!(&result[0], Edit::Unchanged(a, _) if a.text == "B"));
+        assert!(matches!(&result[1], Edit::Unchanged(a, _) if a.text == "C"));
+        assert!(matches!(&result[2], Edit::Unchanged(a, _) if a.text == "A"));
+        assert!(matches!(&result[3], Edit::Delete(e) if e.text == "B"));
+        assert!(matches!(&result[4], Edit::Insert(e) if e.text == "D"));
+        assert!(matches!(&result[5], Edit::Insert(e) if e.text == "C"));
+        assert!(matches!(&result[6], Edit::Unchanged(a, _) if a.text == "A"));
+    }
+
+    #[test]
+    fn missing_first_a_maybe_shortest_edit() {
+        let a = "A\nB\nA";
+        let b = "A\nD\nC\nA";
+
+        let result = Myers.shortest_edit(&Diff.lines(a.to_string()), &Diff.lines(b.to_string()));
+
+        // 3 shortest edit, the result is always 1 more
+        assert_eq!(result.len(), 3 + 1);
+    }
 }
